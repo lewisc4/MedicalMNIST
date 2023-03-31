@@ -14,7 +14,7 @@ It is necessary to have python >= 3.7 installed in order to run the code for thi
 3. Install the [`medical_mnist`](/medical_mnist) module and all dependencies by running the following command: `pip install -e .` (required python modules are in [`requirements.txt`](/requirements.txt)).
 
 ### Downloading the Dataset
-The dataset can be downloaded from [here](https://www.kaggle.com/datasets/andrewmvd/medical-mnist).
+The dataset can be downloaded from [here](https://www.kaggle.com/datasets/andrewmvd/medical-mnist). By default, it is assumed that it will be downloaded under [`cli/`](/cli). Once downloaded, it should be unzipped (you can delete the `.zip` file after). The path to the unzipped folder (can be a relative path) can then be provided to the `dataset_dir` argument for scripts run from the [`cli/`](/cli) directory. See the [**Training**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#training) section for examples.
 
 ### GPU-related Requirements/Installations
 Follow the steps below to ensure your GPU and all relevant libraries are up to date and in good standing.
@@ -31,9 +31,23 @@ Follow the steps below to ensure your GPU and all relevant libraries are up to d
 The [`train.py`](/cli/train.py) script is used to train a model via CLI arguments.
 
 ### Hyperparameters
-The available hyperparameters are stored in [`utils.py`](/medical_mnist/utils.py).
+All available script arguments can be found in [cli_utils.py](/medical_mnist/cli_utils.py#L10). Some useful parameters to change/test with are: 
+
+* `dataset_dir` <- Folder where the dataset is stored (`cli/dataset/` by default, see [**Downloading The Dataset**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#downloading-the-dataset))
+* `output_dir` <- Where to save the model (created if it doesn't exist)
+* `pretrained_model_name` <- The name of the pre-trained model to load for fine-tuning
+* `percent_val` <- Percentage of the dataset to use as validation data
+* `percent_test` <- Percentage of the dataset to use as test data
+* `learning_rate` <- The external learning rate (used by the optimizer)
+* `batch_size` <- Batch size used by the model
+* `weight_decay` <- The external weight decay (used by the optimizer)
+* `eval_every_steps` <- How often to evaluate the model (on the validation data)
+* `num_train_epochs` <- Number of training epochs to use
+* `wandb_project` <- The weights and biases project to use (not required)
+* `use_wandb` <- Whether to log to weights and biases or not (do not use unless you have a project set via `wandb_project`)
+
 
 ### Example Usage
-***To train a model using the defaul arguments:***
-- `python3 train.py`
+**To train a model, using a specified dataset folder named "dataset":**
+- `python3 train.py --dataset_dir=dataset`
 
