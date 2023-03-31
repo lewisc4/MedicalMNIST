@@ -1,1 +1,6 @@
-setuptools==42.0.2
+datasets>=2.0.0
+numpy>=1.21.6
+scikit_learn>=1.0.2
+setuptools>=42.0.2
+torch>=1.13.0
+torchvision>=0.14.0
