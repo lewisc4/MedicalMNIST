@@ -1,6 +1,11 @@
 '''
 File to train a model via CLI arguments
 '''
+import sys
+# append the path of the
+# parent directory
+sys.path.append("..")
+
 import logging
 
 from datasets import load_metric
