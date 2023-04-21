@@ -22,22 +22,33 @@ PRETRAINED_WEIGHTS = {
 	'alexnet': torchvision.models.AlexNet_Weights.DEFAULT,
 }
 
+# Number of input features for the full-connected (fc) layer for each model
+INPUT_FEATURES = {
+	'resnet-18': 512,
+	'resnet-50': 512,
+	'vgg-16': 4096,
+	'alexnet': 4096,
+}
 
-def init_model(model_name, pretrained=True):
+
+def init_model(model_name, num_classes=1000, pretrained=True):
 	'''Initialize a model based on name (i.e., architecture)
 
 	Args:
 		model_name (str): The model architecture to use
+		num_classes (int, optional): # of classes to use for output features
 		pretrained (bool, optional): Whether to use pretrained weights or not
 
 	Returns:
 		torchvision model: The initialized torchvision model
 	'''
-	# Get the model architecture and weights by name
-	# Defaults to ResNet-18 architecture, with no weights
+	# Get the model architecture, input features, and weights by name
+	# Defaults to ResNet-18, with 1000 classes (ImageNet) and no weights
 	architecture = PRETRAINED_MODELS.get(model_name, torchvision.models.resnet18)
+	in_features = INPUT_FEATURES.get(model_name, 512)
 	weights = PRETRAINED_WEIGHTS.get(model_name, None) if pretrained else None
 	model = architecture(weights=weights)
+	model.fc = torch.nn.Linear(in_features, num_classes)
 	return model
 
 

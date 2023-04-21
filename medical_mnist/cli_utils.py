@@ -76,10 +76,16 @@ def parse_args():
 		help='Percentage of the data to use for testing (train_val_size * percent_train).',
 	)
 	parser.add_argument(
-		'--weigh_classes',
+		'--weighted_sampling',
 		default=False,
 		action='store_true',
-		help='Whether to weigh classes during sampling in the training phase.',
+		help='Controls if class weights are used when sampling during training.',
+	)
+	parser.add_argument(
+		'--weighted_loss',
+		default=False,
+		action='store_true',
+		help='Controls if class weights are used by the loss function.',
 	)
 	# Training arguments
 	parser.add_argument(
@@ -106,10 +112,10 @@ def parse_args():
 		help='Weight decay to use.',
 	)
 	parser.add_argument(
-		'--num_train_epochs',
+		'--num_epochs',
 		type=int,
 		default=15,
-		help='Total # of training epochs to perform.',
+		help='Total number of training epochs to perform.',
 	)
 	parser.add_argument(
 		'--eval_every',
@@ -124,7 +130,7 @@ def parse_args():
 		help='Compute and log training batch metrics every n steps.',
 	)
 	parser.add_argument(
-		'--checkpoint_every_steps',
+		'--checkpoint_every',
 		type=int,
 		default=500,
 		help='Saves a model checkpoint every n steps.',
@@ -133,7 +139,7 @@ def parse_args():
 		'--max_steps',
 		type=int,
 		default=None,
-		help='Total # of training steps to perform. If provided, overrides num_train_epochs.',
+		help='Number of training steps to perform. If provided, overrides num_epochs.',
 	)
 	parser.add_argument(
 		'--lr_scheduler_type',
@@ -149,7 +155,7 @@ def parse_args():
 		'--num_warmup_steps',
 		type=int,
 		default=0,
-		help='# of steps for the warmup in the lr scheduler.'
+		help='Number of steps for the warmup in the lr scheduler.'
 	)
 	parser.add_argument(
 		'--seed',

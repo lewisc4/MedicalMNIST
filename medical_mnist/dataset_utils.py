@@ -6,23 +6,20 @@ import os
 import torch
 import numpy as np
 
-from abc import ABC, abstractmethod
+from itertools import chain
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Subset, ConcatDataset
 from torch.utils.data.sampler import RandomSampler, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 
 
-def init_dataset(dataset_type, root, val_size, test_size, batch_size):
-    '''Initializes a dataset based on the dataset type.
+def init_dataset(args):
+    '''Initializes a dataset from cli args. See cli_utils.py for avail. args.
 
     Args:
-        dataset_type (str): Dataset type to use (medical-mnist or retinal-oct)
-        root (str): Path to the dataset's root
-        val_size (float): Percentage of dataset to use as validation data
-        test_size (float): Percentage of dataset to use as testing data
-        batch_size (int): Batch size to use for the dataset's DataLoader(s)
+        args (Namespace): CLI arguments to create the dataset
 
     Returns:
         ProjectDataset: Dataset class (MedicalMNISTDataset or RetinalOCTDataset)
@@ -33,8 +30,27 @@ def init_dataset(dataset_type, root, val_size, test_size, batch_size):
         'medical-mnist': MedicalMNISTDataset,
         'retinal-oct': RetinalOCTDataset,
     }
-    dataset_class = dataset_options.get(dataset_type, 'retinal-oct')
-    return dataset_class(root, val_size, test_size, batch_size)
+    dataset_class = dataset_options.get(args.dataset_type, 'retinal-oct')
+    return dataset_class(
+        root=args.dataset_dir,
+        val_size=args.percent_val,
+        test_size=args.percent_test,
+        batch_size=args.batch_size,
+        weighted_sampling=args.weighted_sampling,
+        seed=args.seed,
+    )
+
+
+def flatten(iterable):
+    '''Flattens an iterable (e.g., a list of lists) into one list
+
+    Args:
+        iterable (iterable): The iterable to flatten
+
+    Returns:
+        list: The flattened iterable as a list
+    '''
+    return list(chain.from_iterable(iterable))
 
 
 @dataclass
@@ -49,7 +65,7 @@ class ProjectDataset(ABC):
     image_mean: list = (0.485, 0.456, 0.406) # Per-channel means for transforms
     image_std: tuple = (0.229, 0.224, 0.225) # Per-channel stds for transforms
     image_size: tuple = (64, 64) # The image size to use for image transforms
-    weigh_classes: bool = False # Whether to weigh classes or not
+    weighted_sampling: bool = False # Whether to weigh classes in train sampler
     seed: int = 42 # Random seed to use for reproducibility
 
     def __post_init__(self):
@@ -63,8 +79,10 @@ class ProjectDataset(ABC):
         self.image_transforms = self.get_transforms()
         self.image_folders = self.get_image_folders()
         self.subsets = self.get_subsets()
+        self.class_weights = self.get_class_weights()
         self.dataloaders = self.get_dataloaders()
         self.label_id_maps = self.get_label_id_maps()
+        self.num_classes = len(self.image_folders['train'].classes)
 
     def get_transforms(self):
         '''Get train/target image transforms for augmentation/normalization,
@@ -109,6 +127,18 @@ class ProjectDataset(ABC):
         '''
         raise NotImplementedError
 
+    @abstractmethod
+    def get_targets(self, split='train'):
+        '''Gets the dataset's targets (from a Subset) for a given split.
+
+        Args:
+            split (str, optional): Dataset's split to use. Defaults to 'train'.
+
+        Raises:
+            NotImplementedError: Thrown if not implemented in child class
+        '''
+        raise NotImplementedError
+
     def get_dataloaders(self):
         '''Get train/val/test DataLoaders from their respective Subsets
 
@@ -119,10 +149,8 @@ class ProjectDataset(ABC):
         val_sub = self.subsets['val']
         test_sub = self.subsets['test']
         # If weighing classes, use WeightedRandomSampler (for training)
-        if self.weigh_classes:
-            # Get weights based on our training data's targets
-            targets = [train_sub.dataset.targets[i] for i in train_sub.indices]
-            weights = self.get_target_weights(targets)
+        if self.weighted_sampling:
+            weights = self.class_weights[self.get_targets()]
             train_sampler = WeightedRandomSampler(weights, len(weights))
             # Use RandomSampler if we don't want to use class weights (for training)
         else:
@@ -136,20 +164,15 @@ class ProjectDataset(ABC):
             'test': DataLoader(test_sub, batch_size=self.batch_size, sampler=test_sampler),
         }
 
-    def get_target_weights(self, targets):
-        '''Gets the weight for each class, given a list of targets (i.e., classes).
-
-        Args:
-            targets (Any): The list of targets to weigh
+    def get_class_weights(self):
+        '''Gets class weights based on the training Subset.
 
         Returns:
-            torch.Tensor: 1D Tensor, val at each index is the weight for that class
+            torch.Tensor: A PyTorch (double) Tensor, containing the class weights
         '''
-        counts = np.array([len(np.where(targets == t)[0]) for t in np.unique(targets)])
-        weight_per_target = 1. / counts
-        target_weights = np.array([weight_per_target[t] for t in targets])
-        target_weights = torch.from_numpy(target_weights)
-        return target_weights.double()
+        targets = self.get_targets()
+        counts = np.unique(targets, return_counts=True)[1]
+        return torch.from_numpy(1. / counts).float()
 
     def get_label_id_maps(self):
         '''Gets ImageFolder [label: label_id] and [label_id: label] maps.
@@ -185,6 +208,19 @@ class MedicalMNISTDataset(ProjectDataset):
             'val': datasets.ImageFolder(self.root, transform=train_transform),
             'test': datasets.ImageFolder(self.root, transform=target_transform),
         }
+
+    def get_targets(self, split='train'):
+        '''Gets the dataset's targets (from a Subset) for a given split.
+
+        Args:
+            split (str, optional): Dataset's split to use. Defaults to 'train'.
+
+        Returns:
+            list: The targets corresponding to the split's sample indices
+        '''
+        indices = self.subsets[split].indices
+        targets = self.subsets[split].dataset.targets
+        return [targets[i] for i in indices]
 
     def get_subsets(self):
         '''Gets stratified train/val/test Subsets from their respective ImageFolders.
@@ -245,6 +281,23 @@ class RetinalOCTDataset(ProjectDataset):
             'val': datasets.ImageFolder(val_root, transform=train_transform),
             'test': datasets.ImageFolder(test_root, transform=target_transform),
         }
+
+    def get_targets(self, split='train'):
+        '''Gets the dataset's targets (from a Subset) for a given split.
+        Overrides parent class, because this dataset uses ConcatDataset objects
+        to combine the pre-defined train/val/test sets on Kaggle, so we can
+        make our own custom splits.
+
+        Args:
+            split (str, optional): Dataset's split to use. Defaults to 'train'.
+
+        Returns:
+            list: The targets corresponding to the split's sample indices
+        '''
+        indices = self.subsets[split].indices
+        concatenated_data = self.subsets[split].dataset.datasets
+        targets = flatten([data.targets for data in concatenated_data])
+        return [targets[i] for i in indices]
 
     def get_subsets(self):
         '''Gets stratified train/val/test Subsets from their respective ImageFolders.

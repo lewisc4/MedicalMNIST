@@ -16,7 +16,7 @@ class TrainLogger:
     def __init__(self):
         # Create our logger and default training arguments
         self.logger = logging.getLogger()
-        self.args = parse_args()
+        self.set_train_args()
         self.step = 0
         self.epoch = 0
 
@@ -36,13 +36,21 @@ class TrainLogger:
         self.logger.addHandler(logging.StreamHandler(sys.stdout))
         self.logger.setLevel(logging.INFO)
 
+    def set_train_args(self, train_args=None):
+        '''Sets the training arguments. If None, uses defaults in cli_utils.py
+
+        Args:
+            train_args (Namespace, optional): Training CLI args. Defaults to None.
+        '''
+        self.args = parse_args() if train_args is None else train_args
+
     def start(self, train_args=None):
         '''Begins logging and sets up wandb
 
         Args:
             args (Namespace): Training arguments to use for this logger
         '''
-        self.args = parse_args() if train_args is None else train_args
+        self.set_train_args(train_args)
         pretty_args = pprint.pformat(vars(self.args), compact=True)
         self.logger.info(f'\n> Starting with arguments: \n{pretty_args}\n')
         wandb.init(
@@ -68,10 +76,10 @@ class TrainLogger:
         '''
         self.logger.info('\n***** Beginning Training *****')
         self.logger.info(f'> Model architecture: {self.args.model_architecture}')
-        self.logger.info(f'> Using pretrained weights: {self.args.use_pretrained}')
-        self.logger.info(f'> Number of training epochs: {self.args.num_train_epochs}')
-        self.logger.info(f'> Number of training steps per epoch: {steps_per_epoch}')
-        self.logger.info(f'> Total number of training steps: {self.args.max_steps}\n')
+        self.logger.info(f'> Pretrained: {self.args.use_pretrained}')
+        self.logger.info(f'> Epochs: {self.args.num_epochs}')
+        self.logger.info(f'> Steps per epoch: {steps_per_epoch}')
+        self.logger.info(f'> Total steps: {self.args.max_steps}\n')
 
     def progress(self, step, epoch):
         '''Update our current training step and epoch
@@ -114,7 +122,7 @@ class TrainLogger:
             step (int): The current training step
             epoch (int): The current training epoch
         '''
-        if self.step % self.args.checkpoint_every_steps == 0:
+        if self.step % self.args.checkpoint_every == 0:
             self.logger.info(
                 f'\n> (Epoch={self.epoch}, Step={self.step})'
                 f' - Saving model checkpoint to: {self.args.output_dir}'
@@ -128,9 +136,9 @@ class TrainLogger:
         '''
         self.logger.info('\n***** Training Complete *****')
         self.logger.info(f'> Best (lowest) loss: {best_loss}')
-        self.logger.info(f'> Number of training epochs: {self.epoch}')
-        self.logger.info(f'> Total number of training steps: {self.step}')
-        self.logger.info(f'> Best model will be saved to {self.args.output_dir}')
+        self.logger.info(f'> Epochs: {self.epoch}')
+        self.logger.info(f'> Total steps: {self.step}')
+        self.logger.info(f'> Saving best model to: {self.args.output_dir}')
 
     def upload_model(self):
         '''Uploads a model to wandb

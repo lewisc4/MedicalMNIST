@@ -6,9 +6,9 @@ import math
 import copy
 import torch
 import transformers
+import evaluate
 
 from tqdm import tqdm
-from datasets import load_metric
 from transformers import Adafactor
 from medical_mnist.cli_utils import parse_args
 from medical_mnist.dataset_utils import init_dataset
@@ -20,11 +20,10 @@ from medical_mnist.logging_utils import TrainLogger
 logger = TrainLogger()
 logger.setup()
 # Accuracy metric and loss function to use during training/evalutaion
-accuracy = load_metric('accuracy')
-loss_func = torch.nn.CrossEntropyLoss()
+accuracy = evaluate.load('accuracy')
 
 
-def train(model, train_data, val_data, optimizer, scheduler, args):
+def train_model(model, train_data, val_data, optimizer, loss_f, scheduler, args):
 	'''Trains a base model and returns the trained version
 
 	Args:
@@ -45,7 +44,7 @@ def train(model, train_data, val_data, optimizer, scheduler, args):
 	progress_bar = tqdm(range(args.max_steps))
 	step = 0
 	# Train for specified number of training epochs
-	for epoch in range(args.num_train_epochs):
+	for epoch in range(args.num_epochs):
 		# Set the model to training mode and process a batch of training data
 		model.train()
 		for inputs, labels in train_data:
@@ -57,7 +56,7 @@ def train(model, train_data, val_data, optimizer, scheduler, args):
 			accuracy.add_batch(predictions=preds, references=labels)
 			# Zero out/clear gradients and perform backpropagation
 			optimizer.zero_grad()
-			train_loss = loss_func(model_output, labels).to(args.device)
+			train_loss = loss_f(model_output, labels).to(args.device)
 			train_loss.backward()
 			train_acc = accuracy.compute()['accuracy']
 			# Advance the optimizer and, if provided, learning rate scheduler
@@ -75,12 +74,12 @@ def train(model, train_data, val_data, optimizer, scheduler, args):
 			# Evaluate our model, depending on the step
 			if step % args.eval_every == 0 or step == args.max_steps:
 				# Get validation metrics, check if best loss has improved
-				val_loss, _, _ = evaluate(model, val_data, args)
+				val_loss, _, _ = evaluate_model(model, val_data, loss_f, args)
 				if val_loss < best_loss:
 					best_loss = val_loss
 					best_weights = copy.deepcopy(model.state_dict())
 			# Save our model checkpoint, based on the step
-			if step % args.checkpoint_every_steps == 0:
+			if step % args.checkpoint_every == 0:
 				logger.log_model_checkpoint()
 				save_model(args.model_file, model)
 			# Check if we are done training, based on the step
@@ -91,7 +90,7 @@ def train(model, train_data, val_data, optimizer, scheduler, args):
 	return model, best_loss
 
 
-def evaluate(model, data, args):
+def evaluate_model(model, data, loss_f, args):
 	'''Evaluates the provided model on the provided DataLoader
 
 	Args:
@@ -117,7 +116,7 @@ def evaluate(model, data, args):
 			model_output = model(inputs).to(args.device)
 			preds = model_output.argmax(-1).to(args.device)
 			accuracy.add_batch(predictions=preds, references=labels)
-			running_loss += loss_func(model_output, labels).to(args.device)
+			running_loss += loss_f(model_output, labels).to(args.device)
 			# Save labels/preds (useful for metrics like confusion matrices)
 			val_labels += labels.tolist()
 			val_preds += preds.tolist()
@@ -139,32 +138,28 @@ def main():
 	args = parse_args()
 	# Begin logging ASAP to log all stdout to the cloud
 	logger.start(train_args=args)
+	# Get the dataset, based on the script arguments
+	dataset = init_dataset(args)
+	dataloaders = dataset.dataloaders
 	# Initialize the model to train
-	model = init_model(args.model_architecture, pretrained=args.use_pretrained)
+	model = init_model(
+		args.model_architecture,
+		num_classes=dataset.num_classes,
+		pretrained=args.use_pretrained,
+	)
 	# Move the model to the specified device for training
 	model = model.to(device=args.device)
 	# Watch the model (on wandb) to log its gradients
 	logger.watch_model(model)
-
-	# Get the dataset, based on the provided dataset name
-	dataset = init_dataset(
-		dataset_type=args.dataset_type,
-		root=args.dataset_dir,
-		val_size=args.percent_val,
-		test_size=args.percent_test,
-		batch_size=args.batch_size,
-	)
-	dataloaders = dataset.dataloaders
-
 	# Scheduler and math around the number of training steps
 	steps_per_epoch = len(dataloaders['train'])
 	# If there is no max # of training steps (None by default), set it based on
 	# the # of training epochs and update steps per epoch. Otherwise, use the
 	# max # of training steps to set the # of training epochs.
 	if args.max_steps is None:
-		args.max_steps = args.num_train_epochs * steps_per_epoch
+		args.max_steps = args.num_epochs * steps_per_epoch
 	else:
-		args.num_train_epochs = math.ceil(args.max_steps / steps_per_epoch)
+		args.num_epochs = math.ceil(args.max_steps / steps_per_epoch)
 	# Optimizer to use during training
 	optimizer = Adafactor(
 		model.parameters(),
@@ -173,6 +168,12 @@ def main():
 		scale_parameter=False,
 		relative_step=False,
 	)
+	# Define the loss function, using class weights if specified
+	if args.weighted_loss:
+		class_weights = dataset.class_weights.to(args.device)
+		loss_f = torch.nn.CrossEntropyLoss(weight=class_weights)
+	else:
+		loss_f = torch.nn.CrossEntropyLoss()
 	# Get the learning rate scheduler to use (if provided)
 	scheduler = transformers.get_scheduler(
 		name=args.lr_scheduler_type,
@@ -182,11 +183,12 @@ def main():
 	)
 	# Train a model
 	logger.training_overview(steps_per_epoch=steps_per_epoch)
-	trained_model, best_loss = train(
+	trained_model, best_loss = train_model(
 		model=model,
 		train_data=dataloaders['train'],
 		val_data=dataloaders['val'],
 		optimizer=optimizer,
+		loss_f=loss_f,
 		scheduler=scheduler,
 		args=args,
 	)

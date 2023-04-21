@@ -6,30 +6,22 @@ import gradio as gr
 
 from torchvision import transforms
 from medical_mnist.cli_utils import parse_args
-from medical_mnist.dataset_utils import MedicalMNISTDataset, RetinalOCTDataset
+from medical_mnist.dataset_utils import init_dataset
 from medical_mnist.model_utils import init_model, load_model
 
 
-# The different options to create a dataset class (values), based on the
-# provided argument for the dataset name (keys)
-DATASET_OPTIONS = {
-    'medical-mnist': MedicalMNISTDataset,
-    'retinal-oct': RetinalOCTDataset,
-}
 # Parse the script arguments
 args = parse_args()
-# Create the dataset, based on the script arguments. We need the dataset
-# for the (class id -> class label name) mapping for model outputs
-dataset_class = DATASET_OPTIONS.get(args.dataset_type, 'retinal-oct')
-dataset = dataset_class(
-	root=args.dataset_dir,
-	val_size=args.percent_val,
-	test_size=args.percent_test,
-	batch_size=args.batch_size,
-)
+# Create the dataset, based on the script arguments. We need the dataset to get
+# the number of classes and the (class id -> class label name) mappings
+dataset = init_dataset(args)
 # Create the model shell. Here we don't want to use pretrained weights from
 # PyTorch, because we are loading our own saved model into the shell to demo.
-model_shell = init_model(args.model_architecture, pretrained=False)
+model_shell = init_model(
+	args.model_architecture,
+	num_classes=dataset.num_classes,
+	pretrained=False
+)
 # Load the specified model file (the weights from the model we trained/saved)
 # into the above model shell/architecture, making sure to switch to eval mode.
 model = load_model(args.model_file, model_shell).eval()
