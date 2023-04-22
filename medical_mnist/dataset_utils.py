@@ -15,7 +15,7 @@ from torch.utils.data.sampler import RandomSampler, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 
 
-def init_dataset(args):
+def dataset_from_args(args):
     '''Initializes a dataset from cli args. See cli_utils.py for avail. args.
 
     Args:
@@ -36,6 +36,8 @@ def init_dataset(args):
         val_size=args.percent_val,
         test_size=args.percent_test,
         batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        pin_memory=args.pin_memory,
         weighted_sampling=args.weighted_sampling,
         seed=args.seed,
     )
@@ -60,7 +62,9 @@ class ProjectDataset(ABC):
     root: str # The root image folder
     val_size: float # Percentage of data to use as validation data
     test_size: float # Percentage of data to use as training data
-    batch_size: int # The batch size to use in the dataloaders
+    batch_size: int # The batch size to use in the DataLoaders
+    num_workers: int # The number of workers to use in the DataLoaders
+    pin_memory: bool # Whether to pin memory in DataLoaders or not
     # Default image mean and standard deviation are from ImageNet
     image_mean: list = (0.485, 0.456, 0.406) # Per-channel means for transforms
     image_std: tuple = (0.229, 0.224, 0.225) # Per-channel stds for transforms
@@ -158,10 +162,33 @@ class ProjectDataset(ABC):
         # Never use weighted sampler for val/test sets
         val_sampler = RandomSampler(val_sub)
         test_sampler = RandomSampler(test_sub)
+        # Create the train/val/test DataLoaders
+        train_dataloader = DataLoader(
+            train_sub,
+            batch_size=self.batch_size,
+            sampler=train_sampler,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
+        val_dataloader = DataLoader(
+            val_sub,
+            batch_size=self.batch_size,
+            sampler=val_sampler,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
+        test_dataloader = DataLoader(
+            test_sub,
+            batch_size=self.batch_size,
+            sampler=test_sampler,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
+
         return {
-            'train': DataLoader(train_sub, batch_size=self.batch_size, sampler=train_sampler),
-            'val': DataLoader(val_sub, batch_size=self.batch_size, sampler=val_sampler),
-            'test': DataLoader(test_sub, batch_size=self.batch_size, sampler=test_sampler),
+            'train': train_dataloader,
+            'val': val_dataloader,
+            'test': test_dataloader,
         }
 
     def get_class_weights(self):

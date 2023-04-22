@@ -94,10 +94,28 @@ def parse_args():
 		help='Device (cuda or cpu) on which the code should run',
 	)
 	parser.add_argument(
+		'--non_blocking',
+		default=False,
+		action='store_true',
+		help='Controls if non-blocking transfers are used in .to(device) for batch data.',
+	)
+	parser.add_argument(
 		'--batch_size',
 		type=int,
 		default=128,
-		help='Batch size (per device) for the training dataloader.',
+		help='Batch size (per device) for each DataLoader.',
+	)
+	parser.add_argument(
+		'--num_workers',
+		type=int,
+		default=0,
+		help='Number of workers to use for each DataLoader.',
+	)
+	parser.add_argument(
+		'--pin_memory',
+		default=False,
+		action='store_true',
+		help='Controls if each DataLoader to use pinned memory.',
 	)
 	parser.add_argument(
 		'--learning_rate',

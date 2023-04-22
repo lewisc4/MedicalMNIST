@@ -6,7 +6,7 @@ import gradio as gr
 
 from torchvision import transforms
 from medical_mnist.cli_utils import parse_args
-from medical_mnist.dataset_utils import init_dataset
+from medical_mnist.dataset_utils import dataset_from_args
 from medical_mnist.model_utils import init_model, load_model
 
 
@@ -14,7 +14,7 @@ from medical_mnist.model_utils import init_model, load_model
 args = parse_args()
 # Create the dataset, based on the script arguments. We need the dataset to get
 # the number of classes and the (class id -> class label name) mappings
-dataset = init_dataset(args)
+dataset = dataset_from_args(args)
 # Create the model shell. Here we don't want to use pretrained weights from
 # PyTorch, because we are loading our own saved model into the shell to demo.
 model_shell = init_model(
@@ -24,7 +24,9 @@ model_shell = init_model(
 )
 # Load the specified model file (the weights from the model we trained/saved)
 # into the above model shell/architecture, making sure to switch to eval mode.
-model = load_model(args.model_file, model_shell).eval()
+model = load_model(args.model_file, model_shell)
+model.to(args.device)
+model.eval()
 
 
 def predict(model_in):

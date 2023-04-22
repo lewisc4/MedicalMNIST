@@ -12,7 +12,7 @@ from datasets import load_metric
 from tqdm import tqdm
 from transformers import Adafactor
 from medical_mnist.cli_utils import parse_args
-from medical_mnist.dataset_utils import init_dataset
+from medical_mnist.dataset_utils import dataset_from_args
 from medical_mnist.model_utils import init_model, save_model
 from medical_mnist.logging_utils import TrainLogger
 
@@ -51,14 +51,14 @@ def train_model(model, train_data, val_data, optimizer, loss_f, scheduler, args)
 		model.train()
 		for inputs, labels in train_data:
 			# Move inputs/labels to the specified device and get model outputs
-			inputs = inputs.to(args.device)
-			labels = labels.to(args.device)
-			model_output = model(inputs).to(args.device)
-			preds = model_output.argmax(-1).to(args.device)
+			inputs = inputs.to(args.device, non_blocking=args.non_blocking)
+			labels = labels.to(args.device, non_blocking=args.non_blocking)
+			model_output = model(inputs)
+			preds = model_output.argmax(-1)
 			accuracy.add_batch(predictions=preds, references=labels)
 			# Zero out/clear gradients and perform backpropagation
 			optimizer.zero_grad()
-			train_loss = loss_f(model_output, labels).to(args.device)
+			train_loss = loss_f(model_output, labels)
 			train_loss.backward()
 			train_acc = accuracy.compute()['accuracy']
 			# Advance the optimizer and, if provided, learning rate scheduler
@@ -112,13 +112,13 @@ def evaluate_model(model, data, loss_f, args):
 		# Switch to inference mode b/c we're not using autograd
 		with torch.inference_mode():
 			# Move inputs and labels to the specified device
-			inputs = inputs.to(args.device)
-			labels = labels.to(args.device)
+			inputs = inputs.to(args.device, non_blocking=args.non_blocking)
+			labels = labels.to(args.device, non_blocking=args.non_blocking)
 			# Get model outputs/predictions and update running loss/accuracy
-			model_output = model(inputs).to(args.device)
-			preds = model_output.argmax(-1).to(args.device)
+			model_output = model(inputs)
+			preds = model_output.argmax(-1)
 			accuracy.add_batch(predictions=preds, references=labels)
-			running_loss += loss_f(model_output, labels).to(args.device)
+			running_loss += loss_f(model_output, labels)
 			# Save labels/preds (useful for metrics like confusion matrices)
 			val_labels += labels.tolist()
 			val_preds += preds.tolist()
@@ -141,7 +141,7 @@ def main():
 	# Begin logging ASAP to log all stdout to the cloud
 	logger.start(train_args=args)
 	# Get the dataset, based on the script arguments
-	dataset = init_dataset(args)
+	dataset = dataset_from_args(args)
 	dataloaders = dataset.dataloaders
 	# Initialize the model to train
 	model = init_model(
@@ -150,7 +150,7 @@ def main():
 		pretrained=args.use_pretrained,
 	)
 	# Move the model to the specified device for training
-	model = model.to(device=args.device)
+	model.to(device=args.device)
 	# Watch the model (on wandb) to log its gradients
 	logger.watch_model(model)
 	# Scheduler and math around the number of training steps
