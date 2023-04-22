@@ -6,8 +6,9 @@ import math
 import copy
 import torch
 import transformers
-import evaluate
+# import evaluate
 
+from datasets import load_metric
 from tqdm import tqdm
 from transformers import Adafactor
 from medical_mnist.cli_utils import parse_args
@@ -20,7 +21,8 @@ from medical_mnist.logging_utils import TrainLogger
 logger = TrainLogger()
 logger.setup()
 # Accuracy metric and loss function to use during training/evalutaion
-accuracy = evaluate.load('accuracy')
+# accuracy = evaluate.load('accuracy')
+accuracy = load_metric('accuracy')
 
 
 def train_model(model, train_data, val_data, optimizer, loss_f, scheduler, args):
