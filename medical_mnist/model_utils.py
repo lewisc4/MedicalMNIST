@@ -5,6 +5,8 @@ See cli/train.py for example usage
 import torch
 import torchvision
 
+from torch.nn import Linear
+
 
 # Available pretrained model architectures
 PRETRAINED_MODELS = {
@@ -13,21 +15,12 @@ PRETRAINED_MODELS = {
 	'vgg-16': torchvision.models.vgg16,
 	'alexnet': torchvision.models.alexnet,
 }
-
 # Available pretrained model weights
 PRETRAINED_WEIGHTS = {
 	'resnet-18': torchvision.models.ResNet18_Weights.DEFAULT,
 	'resnet-50': torchvision.models.ResNet50_Weights.DEFAULT,
 	'vgg-16': torchvision.models.VGG16_Weights.DEFAULT,
 	'alexnet': torchvision.models.AlexNet_Weights.DEFAULT,
-}
-
-# Number of input features for the full-connected (fc) layer for each model
-INPUT_FEATURES = {
-	'resnet-18': 512,
-	'resnet-50': 512,
-	'vgg-16': 4096,
-	'alexnet': 4096,
 }
 
 
@@ -45,12 +38,14 @@ def init_model(model_name, num_classes=1000, pretrained=True):
 	# Get the model architecture, input features, and weights by name
 	# Defaults to ResNet-18, with 1000 classes (ImageNet) and no weights
 	architecture = PRETRAINED_MODELS.get(model_name, torchvision.models.resnet18)
-	in_features = INPUT_FEATURES.get(model_name, 512)
 	weights = PRETRAINED_WEIGHTS.get(model_name, None) if pretrained else None
 	model = architecture(weights=weights)
-	model.fc = torch.nn.Linear(in_features, num_classes)
+	# Update the model's final layer with the new number of classes
+	if model_name in ('resnet-18', 'resnet-50'):
+		model.fc = Linear(model.fc.in_features, num_classes)
+	elif model_name in ('vgg-16', 'alexnet'):
+		model.classifier[6] = Linear(model.classifier[6].in_features, num_classes)
 	return model
-
 
 def save_model(path, model):
 	'''Saves a model to the provided path (including filename)
