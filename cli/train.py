@@ -13,7 +13,7 @@ from tqdm import tqdm
 from transformers import Adafactor
 from medical_mnist.cli_utils import parse_args
 from medical_mnist.dataset_utils import dataset_from_args
-from medical_mnist.model_utils import init_model, save_model
+from medical_mnist.model_utils import init_model, save_model, evaluate_model
 from medical_mnist.logging_utils import TrainLogger
 
 
@@ -71,15 +71,22 @@ def train_model(model, train_data, val_data, optimizer, loss_f, scheduler, args)
 			logger.progress(step=step, epoch=epoch)
 			# Log training metrics
 			logger.log_train_metrics(
-				metrics={'Train Loss': train_loss.item(), 'Train Accuracy': train_acc}
+				{'train_loss': train_loss.item(), 'Train Accuracy': train_acc}
 			)
 			# Evaluate our model, depending on the step
 			if step % args.eval_every == 0 or step == args.max_steps:
-				# Get validation metrics, check if best loss has improved
-				val_loss, _, _ = evaluate_model(model, val_data, loss_f, args)
-				if val_loss < best_loss:
-					best_loss = val_loss
+				# Get validation metrics and check if best loss has improved
+				val_metrics, _ = evaluate_model(
+					model=model,
+					data=val_data,
+					loss_f=loss_f,
+					device=args.device,
+					non_blocking=args.non_blocking
+				)
+				if val_metrics['val_loss'] < best_loss:
+					best_loss = val_metrics['val_loss']
 					best_weights = copy.deepcopy(model.state_dict())
+					logger.log_val_metrics(val_metrics)
 			# Save our model checkpoint, based on the step
 			if step % args.checkpoint_every == 0:
 				logger.log_model_checkpoint()
@@ -90,47 +97,6 @@ def train_model(model, train_data, val_data, optimizer, loss_f, scheduler, args)
 	# Load and return the model with the best weights
 	model.load_state_dict(best_weights)
 	return model, best_loss
-
-
-def evaluate_model(model, data, loss_f, args):
-	'''Evaluates the provided model on the provided DataLoader
-
-	Args:
-		model (torchvision model): The model to evaluate
-		data (torch.utils.data.DataLoader): The evaluation data's DataLoader
-		args (Namespace): CLI arguments provided to this script
-
-	Returns:
-		float, float, tuple: Val loss, accuracy, and (label, prediction) pairs
-	'''
-	# Set the model to evaluation mode
-	model.eval()
-	# Keep track of running loss and model outputs (labels and their preds)
-	running_loss = 0.0
-	val_labels, val_preds = [], []
-	for inputs, labels in tqdm(data, desc='Evaluation'):
-		# Switch to inference mode b/c we're not using autograd
-		with torch.inference_mode():
-			# Move inputs and labels to the specified device
-			inputs = inputs.to(args.device, non_blocking=args.non_blocking)
-			labels = labels.to(args.device, non_blocking=args.non_blocking)
-			# Get model outputs/predictions and update running loss/accuracy
-			model_output = model(inputs)
-			preds = model_output.argmax(-1)
-			accuracy.add_batch(predictions=preds, references=labels)
-			running_loss += loss_f(model_output, labels)
-			# Save labels/preds (useful for metrics like confusion matrices)
-			val_labels += labels.tolist()
-			val_preds += preds.tolist()
-	# Set the model back to training mode
-	model.train()
-	# Compute the total (i.e. the batch) loss and accuracy
-	val_loss = running_loss / len(data.dataset)
-	val_acc = accuracy.compute()['accuracy']
-	logger.log_val_metrics(
-		metrics={'Val Loss': val_loss.item(), 'Val Accuracy': val_acc}
-	)
-	return val_loss, val_acc, (val_labels, val_preds)
 
 
 def main():
@@ -150,7 +116,7 @@ def main():
 		pretrained=args.use_pretrained,
 	)
 	# Move the model to the specified device for training
-	model.to(device=args.device)
+	model.to(args.device)
 	# Watch the model (on wandb) to log its gradients
 	logger.watch_model(model)
 	# Scheduler and math around the number of training steps

@@ -8,3 +8,4 @@ transformers==4.20.0
 gradio==3.27.0
 scikit_learn==1.0.2
 wandb==0.12.10
+grad-cam==1.4.6

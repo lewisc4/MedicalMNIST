@@ -7,6 +7,8 @@ import copy
 import argparse
 import torch
 
+from os.path import join, splitext
+
 
 def parse_args():
 	'''
@@ -41,8 +43,8 @@ def parse_args():
 	parser.add_argument(
 		'--model_file',
 		type=str,
-		default='saved_model.pt',
-		help='Name of the model file to save to/load from (extension should be .pt or .pth)'
+		default='saved_model',
+		help='Name of the model file to save to/load from'
 	)
 	parser.add_argument(
 		'--model_architecture',
@@ -181,6 +183,36 @@ def parse_args():
 		default=42,
 		help='A seed for reproducible training.',
 	)
+	parser.add_argument(
+		'--metric_dir',
+		type=str,
+		default='metrics',
+		help='Directory to save metrics to.'
+	)
+	parser.add_argument(
+		'--metric_pfx',
+		type=str,
+		default='',
+		help='Prefix used in metric file names/titles to uniquely identify them.'
+	)
+	parser.add_argument(
+		'--scores_file',
+		type=str,
+		default='scores',
+		help='Name of the file to save scores (precision, recall, etc.) to.'
+	)
+	parser.add_argument(
+		'--conf_mat_file',
+		type=str,
+		default='confusion_matrix',
+		help='Name of the file to save a confusion matrix figure to.'
+	)
+	parser.add_argument(
+		'--demo_gradcam',
+		default=False,
+		action='store_true',
+		help='Tells the demo to use GradCAM instead of standard model.',
+	)
 	# Weights and biases (wandb) arguments
 	parser.add_argument(
 		'--wandb_project',
@@ -207,7 +239,22 @@ def validate_args(args):
 		args (Namespace): The CLI arguments to validate
 	'''
 	valid = copy.deepcopy(args)
-	# Make sure output directory exists, if not create it
+	# Check if output dir (where models are saved) exists, if not create it
 	os.makedirs(valid.output_dir, exist_ok=True)
-	valid.model_file = os.path.join(valid.output_dir, valid.model_file)
+	# Make sure metric dir (where metrics are saved) exists, if not create it
+	os.makedirs(valid.metric_dir, exist_ok=True)
+	# Update file names to use the valid paths
+	# Also, strip the last extension (if it exists) and add a valid extension
+	valid.model_file = join(
+		valid.output_dir,
+		splitext(valid.model_file)[0] + '.pt',
+	)
+	valid.scores_file = join(
+		valid.metric_dir,
+		valid.metric_pfx + splitext(valid.scores_file)[0] + '.txt',
+	)
+	valid.conf_mat_file = os.path.join(
+		valid.metric_dir,
+		valid.metric_pfx + splitext(valid.conf_mat_file)[0] + '.png',
+	)
 	return valid
