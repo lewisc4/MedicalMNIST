@@ -6,6 +6,7 @@ import math
 import copy
 import torch
 import transformers
+# Un-comment the below line to use HuggingFace's new evaluation library
 # import evaluate
 
 from datasets import load_metric
@@ -21,6 +22,7 @@ from medical_mnist.logging_utils import TrainLogger
 logger = TrainLogger()
 logger.setup()
 # Accuracy metric and loss function to use during training/evalutaion
+# Un-comment the below line to use HuggingFace's new evaluation-related library
 # accuracy = evaluate.load('accuracy')
 accuracy = load_metric('accuracy')
 
