@@ -50,7 +50,6 @@ def init_model(model_type, num_classes=1000, pretrained=True):
 		model.fc = Linear(model.fc.in_features, num_classes)
 	elif model_type in ('vgg-16', 'alexnet'):
 		model.classifier[6] = Linear(model.classifier[6].in_features, num_classes)
-	print(model)
 	return model
 
 

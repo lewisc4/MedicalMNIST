@@ -147,7 +147,7 @@ def main():
 		name=args.lr_scheduler_type,
 		optimizer=optimizer,
 		num_warmup_steps=args.num_warmup_steps,
-		num_training_steps=args.max_steps
+		num_training_steps=args.max_steps,
 	)
 	# Train a model
 	logger.training_overview(steps_per_epoch=steps_per_epoch)
