@@ -201,13 +201,16 @@ class ProjectDataset(ABC):
         counts = np.unique(targets, return_counts=True)[1]
         return torch.from_numpy(1. / counts).float()
 
-    def get_label_id_maps(self):
+    def get_label_id_maps(self, split='train'):
         '''Gets ImageFolder [label: label_id] and [label_id: label] maps.
+
+        Args:
+            split (str, optional): Dataset's split to use. Defaults to 'train'.
 
         Returns:
             dict: The ImageFolder [label: label_id] and [label_id: label] maps
         '''
-        label_to_idx = self.image_folders['train'].class_to_idx
+        label_to_idx = self.image_folders[split].class_to_idx
         idx_to_label = {idx: label for label, idx in label_to_idx.items()}
         return {
             'label_to_id': label_to_idx,

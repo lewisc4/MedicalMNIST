@@ -2,10 +2,10 @@
 Script (run via CLI arguments) to demo a trained model.
 '''
 import torch
+import cv2
 import numpy as np
 import gradio as gr
 
-from torchvision import transforms
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from medical_mnist.cli_utils import parse_args
@@ -17,7 +17,7 @@ from medical_mnist.model_utils import load_model
 TARGET_LAYERS = {
 	'resnet-18': lambda net: net.layer4[-1],
 	'resnet-50': lambda net: net.layer4[-1],
-	'vgg-16': lambda net: net.features[-1],
+	'vgg-16': lambda net: net.features[28],
 	'alexnet': lambda net: net.features[-1],
 }
 # Parse the script arguments
@@ -31,6 +31,7 @@ model = load_model(
 	path=args.model_file,
 	model_type=args.model_architecture,
 	num_classes=dataset.num_classes,
+	device=args.device,
 )
 # Move the model to the specified device and switch to eval() mode
 model.to(args.device)
@@ -51,8 +52,10 @@ def gradcam_demo(model_in):
 		gradio.Image: The GradCAM visualization
 	'''
 	# Convert input to an RGB image
-	rgb_image = np.float32(model_in) / 255
-	model_in = transforms.ToTensor()(model_in).unsqueeze(0)
+	image = cv2.resize(np.float32(model_in), dataset.image_size)
+	rgb_image = np.float32(image) / 255
+	# Transform the input using the correct target transform
+	model_in = dataset.image_transforms['target'](model_in).unsqueeze(0)
 	# Get GradCAM output
 	grayscale_cam = cam(input_tensor=model_in)
 	grayscale_cam = grayscale_cam[0, :]
@@ -70,11 +73,12 @@ def standard_demo(model_in):
 	Returns:
 		dict[Any, float]: Confidence for each class label id
 	'''
-	model_in = transforms.ToTensor()(model_in).unsqueeze(0)
+	# Transform the input using the correct target transform
+	model_in = dataset.image_transforms['target'](model_in).unsqueeze(0)
 	idx_to_label = dataset.get_label_id_maps()['id_to_label']
 	indices = range(len(idx_to_label.keys()))
 	with torch.no_grad():
-		model_out = model(model_in).to(args.device)
+		model_out = model(model_in)
 		class_preds = torch.nn.functional.softmax(model_out[0], dim=0)
 		confidences = {idx_to_label[i]: float(class_preds[i]) for i in indices}
 	return confidences

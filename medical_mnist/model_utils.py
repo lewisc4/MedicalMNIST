@@ -25,7 +25,6 @@ PRETRAINED_WEIGHTS = {
 	'alexnet': torchvision.models.AlexNet_Weights.DEFAULT,
 }
 # Accuracy metric and loss function to use during training/evalutaion
-# accuracy = evaluate.load('accuracy')
 accuracy = load_metric('accuracy')
 
 
@@ -63,7 +62,7 @@ def save_model(path, model):
 	torch.save({'model_state_dict': model.state_dict()}, path)
 
 
-def load_model(path, model_type, num_classes):
+def load_model(path, model_type, num_classes, device='cpu'):
 	'''Loads a model from the provided path and model shell
 
 	Args:
@@ -77,7 +76,7 @@ def load_model(path, model_type, num_classes):
 	# because we are loading our own saved model weights.
 	model = init_model(model_type, num_classes=num_classes, pretrained=False)
 	# Load the model weights (stored in state_dict) into the shell
-	saved_state = torch.load(path)
+	saved_state = torch.load(path, map_location=torch.device(device))
 	model.load_state_dict(saved_state['model_state_dict'])
 	return model
 

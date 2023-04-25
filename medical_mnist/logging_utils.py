@@ -147,7 +147,7 @@ class TrainLogger:
             model_to_upload (torchvision model): Model to upload to wandb
         '''
         self.logger.info('\n> Uploading model to wandb')
-        wandb.save(self.args.save_file)
+        wandb.save(self.args.model_file)
 
     def finish(self):
         '''Logs that the training script has finished successfully w/out errors

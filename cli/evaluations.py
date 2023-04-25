@@ -80,6 +80,7 @@ def main():
 		path=args.model_file,
 		model_type=args.model_architecture,
 		num_classes=dataset.num_classes,
+		device=args.device,
 	)
 	model.to(args.device)
 	# Define the loss function, using class weights if specified

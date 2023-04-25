@@ -21,7 +21,7 @@ from medical_mnist.logging_utils import TrainLogger
 # Setup logging
 logger = TrainLogger()
 logger.setup()
-# Accuracy metric and loss function to use during training/evalutaion
+# Accuracy metric and loss function to use during training (and evalutaion)
 # Un-comment the below line to use HuggingFace's new evaluation-related library
 # accuracy = evaluate.load('accuracy')
 accuracy = load_metric('accuracy')
@@ -88,7 +88,7 @@ def train_model(model, train_data, val_data, optimizer, loss_f, scheduler, args)
 				if val_metrics['val_loss'] < best_loss:
 					best_loss = val_metrics['val_loss']
 					best_weights = copy.deepcopy(model.state_dict())
-					logger.log_val_metrics(val_metrics)
+				logger.log_val_metrics(val_metrics)
 			# Save our model checkpoint, based on the step
 			if step % args.checkpoint_every == 0:
 				logger.log_model_checkpoint()
