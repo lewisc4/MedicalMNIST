@@ -2,8 +2,9 @@
 
 
 ## Project Overview
-In this project, multiple CNN variants are trained to classify medical images from the [Medical MNIST](https://www.kaggle.com/datasets/andrewmvd/medical-mnist) dataset. Each image is a 64 $\times$ 64 grayscale image and belongs to one of six classes: AbdomenCT, BreastMRI, CXR, ChestCT, Hand, and HeadCT.
+This project provides the functionality to train multiple CNN architectures to perform medical image classification on two datasets. The first is the  the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018) dataset, which contains 84,495 grayscale OCT images of human retinas, each belonging to one of four disease classes: CNV, DNE, DRUSEN, and NORMAL (i.e., no disease). The second dataset is the [Medical MNIST](https://www.kaggle.com/datasets/andrewmvd/medical-mnist) dataset, which consists of 58,954 grayscale medical images, each belonging to one of six classes: AbdomenCT, BreastMRI, CXR, ChestCT, Hand, and HeadCT.
 
+Results and notebook examples are only reported on the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018) dataset. For more information on downloading the datasets, please see the [Downloading the Datasets](https://github.com/lewisc4/MedicalMNIST#downloading-the-datasets) section. For more information regarding the datasets themselves, please see their linked Kaggle pages.
 
 ## Environment Setup
 ### Package Installation
@@ -11,10 +12,49 @@ It is necessary to have python >= 3.7 installed in order to run the code for thi
 
 1. Clone or download this project to your local computer.
 2. Navigate to the [root directory](https://github.com/lewisc4/MedicalMNIST), where the [`setup.py`](/setup.py) file is located.
-3. Install the [`medical_mnist`](/medical_mnist) module and all dependencies by running the following command: `pip install -e .` (required python modules are in [`requirements.txt`](/requirements.txt)).
+3. Install the [`medical_mnist`](/medical_mnist) module and all dependencies by running: `pip install -e .` (required python modules are in [`requirements.txt`](/requirements.txt)).
 
-### Downloading the Dataset
-The dataset can be downloaded from [here](https://www.kaggle.com/datasets/andrewmvd/medical-mnist). By default, it is assumed that it will be downloaded under [`cli/`](/cli). Once downloaded, it should be unzipped (you can delete the `.zip` file after). The path to the unzipped folder (can be a relative path) can then be provided to the `dataset_dir` argument for scripts run from the [`cli/`](/cli) directory. See the [**Training**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#training) section for examples.
+### Downloading the Datasets
+Both the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018) and [Medical MNIST](https://www.kaggle.com/datasets/andrewmvd/medical-mnist) datasets can be downloaded from Kaggle. For the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018), Version 2 should be downloaded. Once downloaded, they should be unzipped (you can delete the `.zip` files after). Then, the path to the unzipped folder's root (it can be a relative path) can then be provided to the `dataset_dir` argument for scripts run from the [`cli/`](/cli) directory (by default, it is assumed that the datasets will be downloaded under [`cli/`](/cli).). See the [**Training**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#training) section for examples. The expected directory structure for each dataset is (where `root` is the name of each dataset's root folder):
+
+<details>
+  <summary>Retinal OCT Structure</summary>
+
+```python
+root
+  ├── test
+  │   ├── CNV
+  │   ├── DME
+  │   ├── DRUSEN
+  │   └── NORMAL
+  ├── train
+  │   ├── CNV
+  │   ├── DME
+  │   ├── DRUSEN
+  │   └── NORMAL
+  └── val
+      ├── CNV
+      ├── DME
+      ├── DRUSEN
+      └── NORMAL
+```
+
+</details>
+
+<details>
+  <summary>Medical MNIST Structure</summary>
+  
+```python
+root
+  ├── AbdomenCT
+  ├── BreastMRI
+  ├── CXR
+  ├── ChestCT
+  ├── Hand
+  └── HeadCT
+```
+
+</details>
 
 ### GPU-related Requirements/Installations
 Follow the steps below to ensure your GPU and all relevant libraries are up to date and in good standing.
@@ -34,17 +74,22 @@ The [`train.py`](/cli/train.py) script is used to train a model via CLI argument
 All available script arguments can be found in [cli_utils.py](/medical_mnist/cli_utils.py#L10). Some useful parameters to change/test with are: 
 
 * `dataset_dir` <- Folder where the dataset is stored (`cli/dataset/` by default, see [**Downloading The Dataset**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#downloading-the-dataset))
-* `output_dir` <- Where to save the model (created if it doesn't exist)
-* `pretrained_model_name` <- The name of the pre-trained model to load for fine-tuning
+* `dataset_type` <- The type of dataset to use (`"retinal-oct"` (default) or `"medical-mnist"`)
+* `output_dir` <- Directory to save the trained model to (created if it doesn't exist)
+* `model_file` <- The name of the actual model `.pt` file being saved in `output_dir`
+* `model_architecture` <- Model architecture to use for training (`"resnet-18"` (default), `"resnet-50"`, `"vgg-16"`, or `"alexnet"`)
+* `use_pretrained`, `from_scratch` <- Dictates if pre-trained weights are used or not, respectively
 * `percent_val` <- Percentage of the dataset to use as validation data
-* `percent_test` <- Percentage of the dataset to use as test data
+* `percent_test` <- Percentage of the dataset to use as test data (only for Medical MNIST, as Retinal OCT has a predefined test set)
+* `num_workers` <- The number of workers to use in each (train/val/test) DataLoader
+* `weighted_sampling` <- Whether to use weighted sampling in the training DataLoader
+* `weighted_loss` <- Whether to provide class weights to the loss function or not
 * `learning_rate` <- The external learning rate (used by the optimizer)
 * `batch_size` <- Batch size used by the model
 * `weight_decay` <- The external weight decay (used by the optimizer)
-* `eval_every_steps` <- How often to evaluate the model (on the validation data)
-* `num_train_epochs` <- Number of training epochs to use
-* `wandb_project` <- The weights and biases project to use (not required)
-* `use_wandb` <- Whether to log to weights and biases or not (do not use unless you have a project set via `wandb_project`)
+* `eval_every` <- How often (in number of training steps) to evaluate the model on validation data
+* `num_epochs` <- Number of training epochs to use
+* `wandb_project` <- The Weights & Biases project name (account not required)
 
 
 ### Example Usage
