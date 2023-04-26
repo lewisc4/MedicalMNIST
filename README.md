@@ -1,5 +1,6 @@
 # Medical Image Classification Using Deep Learning
 
+
 ## Index
  1. [Project Overview](https://github.com/lewisc4/MedicalMNIST#project-overview)  
  2. [Environment Setup](https://github.com/lewisc4/MedicalMNIST#environment-setup)  
@@ -20,7 +21,9 @@
 ## Project Overview
 This project provides the functionality to train multiple CNN architectures to perform medical image classification on two datasets. The first is the  the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018) dataset, which contains 84,495 grayscale OCT images of human retinas, each belonging to one of four disease classes: CNV, DNE, DRUSEN, and NORMAL (i.e., no disease). The second dataset is the [Medical MNIST](https://www.kaggle.com/datasets/andrewmvd/medical-mnist) dataset, which consists of 58,954 grayscale medical images, each belonging to one of six classes: AbdomenCT, BreastMRI, CXR, ChestCT, Hand, and HeadCT.
 
-Results and notebook examples are only reported on the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018) dataset. For more information on downloading the datasets, please see the [Downloading the Datasets](https://github.com/lewisc4/MedicalMNIST#downloading-the-datasets) section. For more information regarding the datasets themselves, please see their linked Kaggle pages.
+Results and notebook examples are only reported on the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018) dataset. Please see an example training run for VGG-16 on Weights & Biases [here](https://wandb.ai/clewis7744/medical_mnist/runs/lbkb1q0d). For more information on downloading the datasets, please see the [**Downloading the Datasets**](https://github.com/lewisc4/MedicalMNIST#downloading-the-datasets) section. For more information regarding the datasets themselves, please see their linked Kaggle pages.
+
+![Model demo](https://raw.githubusercontent.com/lewisc4/MedicalMNIST/main/standard_demo.gif)
 
 ## Environment Setup
 ### Package Installation
@@ -96,7 +99,7 @@ All available script arguments can be found in [cli_utils.py](/medical_mnist/cli
 
 | Argument/Parameter     | Description                                                                                                                                                               |
 |------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--dataset_dir`        | Dataset's root folder, `cli/dataset/` by default (see [**Downloading The Dataset**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#downloading-the-dataset)) |
+| `--dataset_dir`        | Dataset's root folder, `cli/dataset/` by default (see [**Downloading the Datasets**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#downloading-the-datasets)) |
 | `--dataset_type`       | Type of dataset being used [`retinal-oct` (default), `medical-mnist`]                                                                                                     |
 | `--output_dir`         | Directory to save the trained model to (created if it doesn't exist)                                                                                                      |
 | `--model_file`         | The name of the `.pt` model file to save in `output_dir`                                                                                                                  |
@@ -198,3 +201,9 @@ python3 evaluations.py --model_architecture=resnet-50 --model_file=resnet_model 
 # Here, the input is an image and the output is Grad-CAM's output, overlayed on the input image
 python3 demo.py --model_architecture=vgg-16 --model_file=vgg_model --demo_gradcam --dataset_type=retinal-oct --dataset_dir=oct_data
 ```
+
+Below we can see the "standard" model demonstration (top) and the Grad-CAM demonstrations.
+
+![Model demo](https://raw.githubusercontent.com/lewisc4/MedicalMNIST/main/standard_demo.gif)
+
+![Grad-CAM Model demo](https://raw.githubusercontent.com/lewisc4/MedicalMNIST/main/gradcam_demo.gif)
