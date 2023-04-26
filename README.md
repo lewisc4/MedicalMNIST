@@ -17,8 +17,13 @@ It is necessary to have python >= 3.7 installed in order to run the code for thi
 ### Downloading the Datasets
 Both the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018) and [Medical MNIST](https://www.kaggle.com/datasets/andrewmvd/medical-mnist) datasets can be downloaded from Kaggle. For the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018), Version 2 should be downloaded. Once downloaded, they should be unzipped (you can delete the `.zip` files after). Then, the path to the unzipped folder's root (it can be a relative path) can then be provided to the `dataset_dir` argument for scripts run from the [`cli/`](/cli) directory (by default, it is assumed that the datasets will be downloaded under [`cli/`](/cli).). See the [**Training**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#training) section for examples. The expected directory structure for each dataset is (where `root` is the name of each dataset's root folder):
 
-<details>
-  <summary>Retinal OCT Structure</summary>
+<table align="center">
+<tr>
+<th>Retinal OCT Structure</th>
+<th>Mecical MNIST Structure</th>
+</tr>
+<tr>
+<td valign="top">
 
 ```python
 root
@@ -39,11 +44,9 @@ root
       └── NORMAL
 ```
 
-</details>
+</td>
+<td valign="top"">
 
-<details>
-  <summary>Medical MNIST Structure</summary>
-  
 ```python
 root
   ├── AbdomenCT
@@ -54,7 +57,9 @@ root
   └── HeadCT
 ```
 
-</details>
+</td>
+</tr>
+</table>
 
 ### GPU-related Requirements/Installations
 Follow the steps below to ensure your GPU and all relevant libraries are up to date and in good standing.
@@ -71,28 +76,109 @@ Follow the steps below to ensure your GPU and all relevant libraries are up to d
 The [`train.py`](/cli/train.py) script is used to train a model via CLI arguments.
 
 ### Hyperparameters
-All available script arguments can be found in [cli_utils.py](/medical_mnist/cli_utils.py#L10). Some useful parameters to change/test with are: 
+All available script arguments can be found in [cli_utils.py](/medical_mnist/cli_utils.py#L13). Some useful parameters to change/test with are: 
 
-* `dataset_dir` <- Folder where the dataset is stored (`cli/dataset/` by default, see [**Downloading The Dataset**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#downloading-the-dataset))
-* `dataset_type` <- The type of dataset to use (`"retinal-oct"` (default) or `"medical-mnist"`)
-* `output_dir` <- Directory to save the trained model to (created if it doesn't exist)
-* `model_file` <- The name of the actual model `.pt` file being saved in `output_dir`
-* `model_architecture` <- Model architecture to use for training (`"resnet-18"` (default), `"resnet-50"`, `"vgg-16"`, or `"alexnet"`)
-* `use_pretrained`, `from_scratch` <- Dictates if pre-trained weights are used or not, respectively
-* `percent_val` <- Percentage of the dataset to use as validation data
-* `percent_test` <- Percentage of the dataset to use as test data (only for Medical MNIST, as Retinal OCT has a predefined test set)
-* `num_workers` <- The number of workers to use in each (train/val/test) DataLoader
-* `weighted_sampling` <- Whether to use weighted sampling in the training DataLoader
-* `weighted_loss` <- Whether to provide class weights to the loss function or not
-* `learning_rate` <- The external learning rate (used by the optimizer)
-* `batch_size` <- Batch size used by the model
-* `weight_decay` <- The external weight decay (used by the optimizer)
-* `eval_every` <- How often (in number of training steps) to evaluate the model on validation data
-* `num_epochs` <- Number of training epochs to use
-* `wandb_project` <- The Weights & Biases project name (account not required)
+| Argument/Parameter     | Description                                                                                                                                                               |
+|------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--dataset_dir`        | Dataset's root folder, `cli/dataset/` by default (see [**Downloading The Dataset**](https://github.com/lewisc4/MedicalMNIST/blob/main/README.md#downloading-the-dataset)) |
+| `--dataset_type`       | Type of dataset being used [`retinal-oct` (default), `medical-mnist`]                                                                                                     |
+| `--output_dir`         | Directory to save the trained model to (created if it doesn't exist)                                                                                                      |
+| `--model_file`         | The name of the `.pt` model file to save in `output_dir`                                                                                                                  |
+| `--model_architecture` | Type of model to train [`resnet-18` (default), `resnet-50`, `vgg-16`, `alexnet`]                                                                                          |
+| `--use_pretrained`     | Train using pre-trained weights (default)                                                                                                                                 |
+| `--from_scratch`       | Train from scratch (no pre-trained weights)                                                                                                                               |
+| `--percent_val`        | % of data to use for validation                                                                                                                                           |
+| `--percent_test`       | % of data to use for testing (only for `medical-mnist`, as `retinal-oct` has a fixed test set)                                                                            |
+| `--num_workers`        | Number of workers to use in DataLoader(s)                                                                                                                                 |
+| `--weighted_sampling`  | Whether to use weighted sampling in the training DataLoader or not                                                                                                        |
+| `--weighted_loss`      | Whether to provide class weights to the loss function or not                                                                                                              |
+| `--learning_rate`      | External learning rate used by the optimizer                                                                                                                              |
+| `--device`             | Device to train on, defaults to `cuda` if available, otherwise `cpu`                                                                                                      |
+| `--batch_size`         | Batch size to use in DataLoader(s)                                                                                                                                        |
+| `--weight_decay`       | External weight decay used by the optimizer                                                                                                                               |
+| `--eval_every`         | How often, in number of training steps, to evaluate the model                                                                                                             |
+| `--num_epochs`         | Number of training epochs                                                                                                                                                 |
+| `--wandb_project`      | Weights & Biases project name (account not required)                                                                                                                      |
+| `--upload_model`       | Whether to upload the model to Weights & Biases or not                                                                                                                    |
+
+### Example Usage
+For the below examples, assume we have downloaded the Retinal OCT dataset with a root folder named `oct_data`, as described in the [Downloading the Datasets](https://github.com/lewisc4/MedicalMNIST#downloading-the-datasets) section. Also assume the commands are run from the [`cli/`](/cli) directory.
+
+```bash
+# To train a VGG-16 model on the Retinal OCT dataset, saving it to a file named `vgg_model.pt`:
+$ python3 train.py --model_architecture=vgg-16 --model_file=vgg_model --dataset_type=retinal-oct --dataset_dir=oct_data
+
+# To do the same as above, but with a ResNet-50 model:
+$ python3 train.py --model_architecture=resnet-50 --model_file=resnet_model --dataset_type=retinal-oct --dataset_dir=oct_data
+
+# To train a VGG-16 model for 50 epochs, with a batch size of 256 and learning rate of 0.0005:
+python3 train.py --model_architecture=vgg-16 --num_epochs=50 --batch_size=256 --learning_rate=5e-4  --dataset_type=retinal-oct --dataset_dir=oct_data
+
+# To train a VGG-16 model from scratch, using a class-weighted loss function:
+python3 train.py --model_architecture=vgg-16 --from_scratch --weighted_loss --dataset_type=retinal-oct --dataset_dir=oct_data
+```
+
+
+
+## Evaluation
+The [`evaluations.py`](/cli/evaluations.py) script is used to evaluate a model on test data via CLI arguments.
+
+### Hyperparameters
+All available script arguments can be found in [cli_utils.py](/medical_mnist/cli_utils.py#L13). Some useful parameters to change/test with are: 
+
+| Argument/Parameter     | Description                                                     |
+|------------------------|-----------------------------------------------------------------|
+| `--dataset_dir`        | Root folder of the dataset to evaluate                          |
+| `--dataset_type`       | Type of dataset to evaluate with                                |
+| `--output_dir`         | Directory storing the model to evaluate                         |
+| `--model_file`         | Filename of the model we want to evaluate                       |
+| `--model_architecture` | Architecture of the trained model we want to evaluate           |
+| `--metric_dir`         | Directory to save metric files to (created if it doesn't exist) |
+| `--scores_file`        | The filename to save scores to (accuracy, recall, etc.)         |
+| `--conf_mat_file`      | The filename of the confusion matrix figure                     |
 
 
 ### Example Usage
-**To train a model, using a specified dataset folder named "dataset":**
-- `python3 train.py --dataset_dir=dataset`
+Assume we are evaluating models that were trained on the Retinal OCT dataset, which has a root folder named `oct_data`, as described in the [Downloading the Datasets](https://github.com/lewisc4/MedicalMNIST#downloading-the-datasets) section. Also assume the commands are run from the [`cli/`](/cli) directory.
 
+```bash
+# To evaluate a VGG-16 model that was saved to `vgg_model.pt`
+python3 evaluations.py --model_architecture=vgg-16 --model_file=vgg_model --scores_file=vgg_scores --conf_mat_file=vgg_conf_mat --dataset_type=retinal-oct --dataset_dir=oct_data
+
+# To do the same as above, but using a ResNet-50 model that was saved to `resnet_model.pt`
+python3 evaluations.py --model_architecture=resnet-50 --model_file=resnet_model --scores_file=resnet_scores --conf_mat_file=resnet_conf_mat --dataset_type=retinal-oct --dataset_dir=oct_data
+```
+
+
+
+## Demonstration
+The [`demo.py`](/cli/demo.py) script is used to demonstrate a model (using [gradio](https://gradio.app/)) via CLI arguments.
+
+### Hyperparameters
+All available script arguments can be found in [cli_utils.py](/medical_mnist/cli_utils.py#L13). Some useful parameters to change/test with are: 
+
+| Argument/Parameter     | Description                                                                      |
+|------------------------|----------------------------------------------------------------------------------|
+| `--dataset_dir`        | Root folder of the dataset the model was trained on                              |
+| `--dataset_type`       | Type of dataset the model was trained on                                         |
+| `--output_dir`         | Directory storing the model to demo                                              |
+| `--model_file`         | Filename of the model we want to demo                                            |
+| `--model_architecture` | Architecture of the trained model we want to demo                                |
+| `--demo_gradcam`       | Outputs Grad-CAM results, instead of the model's top-3 predictions (the default) |
+
+
+### Example Usage
+Assume we are evaluating models that were trained on the Retinal OCT dataset, which has a root folder named `oct_data`, as described in the [Downloading the Datasets](https://github.com/lewisc4/MedicalMNIST#downloading-the-datasets) section. Also assume the commands are run from the [`cli/`](/cli) directory.
+
+```bash
+# To demo a VGG-16 model that was saved to `vgg_model.pt`
+# Here, the input is an image and the output is the top-3 classes it most likely belongs to
+python3 demo.py --model_architecture=vgg-16 --model_file=vgg_model --dataset_type=retinal-oct --dataset_dir=oct_data
+
+# To do the same as above, but using a ResNet-50 model that was saved to `resnet_model.pt`
+python3 evaluations.py --model_architecture=resnet-50 --model_file=resnet_model --dataset_type=retinal-oct --dataset_dir=oct_data
+
+# To demo a VGG-16 model that was saved to `vgg_model.pt`, using Grad-CAM
+# Here, the input is an image and the output is Grad-CAM's output, overlayed on the input image
+python3 demo.py --model_architecture=vgg-16 --model_file=vgg_model --demo_gradcam --dataset_type=retinal-oct --dataset_dir=oct_data
+```
