@@ -1,5 +1,21 @@
 # Medical Image Classification Using Deep Learning
 
+## Index
+ 1. [Project Overview](https://github.com/lewisc4/MedicalMNIST#project-overview)  
+ 2. [Environment Setup](https://github.com/lewisc4/MedicalMNIST#environment-setup)  
+  2.1 [Package Installation](https://github.com/lewisc4/MedicalMNIST#package-installation)  
+  2.2 [Downloading the Datasets](https://github.com/lewisc4/MedicalMNIST#downloading-the-datasets)  
+  2.3 [GPU-related Requirements/Installation](https://github.com/lewisc4/MedicalMNIST#gpu-related-requirementsinstallations)
+ 3. [Training](https://github.com/lewisc4/MedicalMNIST#training)  
+  3.1 [Hyperparameters](https://github.com/lewisc4/MedicalMNIST#hyperparameters)  
+  3.2 [Example Usage](https://github.com/lewisc4/MedicalMNIST#hyperparameters)
+ 4. [Evaluation](https://github.com/lewisc4/MedicalMNIST#evaluation)  
+  4.1 [Hyperparameters](https://github.com/lewisc4/MedicalMNIST#hyperparameters-1)  
+  4.2 [Example Usage](https://github.com/lewisc4/MedicalMNIST#example-usage-1)
+ 5. [Demonstration](https://github.com/lewisc4/MedicalMNIST#demonstration)  
+  5.1 [Hyperparameters](https://github.com/lewisc4/MedicalMNIST#hyperparameters-2)  
+  5.2 [Example Usage](https://github.com/lewisc4/MedicalMNIST#example-usage-2)
+  
 
 ## Project Overview
 This project provides the functionality to train multiple CNN architectures to perform medical image classification on two datasets. The first is the  the [Retinal OCT Images](https://www.kaggle.com/datasets/paultimothymooney/kermany2018) dataset, which contains 84,495 grayscale OCT images of human retinas, each belonging to one of four disease classes: CNV, DNE, DRUSEN, and NORMAL (i.e., no disease). The second dataset is the [Medical MNIST](https://www.kaggle.com/datasets/andrewmvd/medical-mnist) dataset, which consists of 58,954 grayscale medical images, each belonging to one of six classes: AbdomenCT, BreastMRI, CXR, ChestCT, Hand, and HeadCT.
@@ -45,7 +61,7 @@ root
 ```
 
 </td>
-<td valign="top"">
+<td valign="top">
 
 ```python
 root
