@@ -125,10 +125,10 @@ For the below examples, assume we have downloaded the Retinal OCT dataset with a
 
 ```bash
 # To train a VGG-16 model on the Retinal OCT dataset, saving it to a file named `vgg_model.pt`:
-$ python3 train.py --model_architecture=vgg-16 --model_file=vgg_model --dataset_type=retinal-oct --dataset_dir=oct_data
+python3 train.py --model_architecture=vgg-16 --model_file=vgg_model --dataset_type=retinal-oct --dataset_dir=oct_data
 
 # To do the same as above, but with a ResNet-50 model:
-$ python3 train.py --model_architecture=resnet-50 --model_file=resnet_model --dataset_type=retinal-oct --dataset_dir=oct_data
+python3 train.py --model_architecture=resnet-50 --model_file=resnet_model --dataset_type=retinal-oct --dataset_dir=oct_data
 
 # To train a VGG-16 model for 50 epochs, with a batch size of 256 and learning rate of 0.0005:
 python3 train.py --model_architecture=vgg-16 --num_epochs=50 --batch_size=256 --learning_rate=5e-4  --dataset_type=retinal-oct --dataset_dir=oct_data
